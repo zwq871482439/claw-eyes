@@ -34,20 +34,25 @@ Just screenshot something (`Win + Shift + S`), then say "看图" or "look at thi
 
 ## Installation / 安装
 
-### Option 1: Manual / 手动安装
+### Option 1: Let your AI install it / 让你的 AI 来安装（推荐 Recommended）
 
-Copy this skill to your WorkBuddy skills directory:
+Just send this message to your WorkBuddy AI assistant:
 
-```powershell
-# User-level (available across all projects)
-Copy-Item -Recurse ".\claw-eyes" "$env:USERPROFILE\.workbuddy\skills\claw-eyes"
+把这段话发给你的 WorkBuddy AI 助手即可：
+
+```
+请帮我安装这个 skill：https://github.com/zwq871482439/claw-eyes
+克隆到 ~/.workbuddy/skills/claw-eyes 目录，安装后检查 CLIPBOARD_SAVE_PATH 环境变量和 MCP 视觉工具是否可用。
 ```
 
-### Option 2: Git clone / 克隆安装
+The AI will clone the repo, install the skill, and verify everything for you.
+
+AI 会自动克隆仓库、安装 skill、并检查环境是否就绪。
+
+### Option 2: Git clone manually / 手动克隆
 
 ```powershell
-git clone https://github.com/zwq871482439/claw-eyes.git
-Copy-Item -Recurse ".\claw-eyes" "$env:USERPROFILE\.workbuddy\skills\claw-eyes"
+git clone https://github.com/zwq871482439/claw-eyes.git "$env:USERPROFILE\.workbuddy\skills\claw-eyes"
 ```
 
 ### Post-install Verification / 安装后验证
