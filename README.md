@@ -1,8 +1,8 @@
 # 👀 Claw Eyes
 
-> **Universal clipboard image reader for any Claw-based AI assistant — read screenshots, analyze via vision APIs or MCP tools**
+> **Universal clipboard image reader for any Claw-based AI assistant — read screenshots, analyze via MCP or vision APIs**
 >
-> 通用剪贴板图片读取器，适配任何基于 Claw 的 AI 助手 — 读取截图，通过视觉 API 或 MCP 工具分析
+> 通用剪贴板图片读取器，适配任何基于 Claw 的 AI 助手 — 读取截图，MCP 优先 / 直连 API 备选
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue)](https://github.com/zwq871482439/claw-eyes)
@@ -11,9 +11,9 @@
 
 ## What is this? / 这是什么？
 
-When using Claw-based AI assistants (WorkBuddy, OpenClaw, QClaw, etc.), you sometimes can't directly paste images into the chat. **Claw Eyes** solves this by reading your system clipboard and passing the image to vision APIs for analysis.
+When using Claw-based AI assistants (WorkBuddy, OpenClaw, QClaw, etc.), you sometimes can't directly paste images into the chat. **Claw Eyes** solves this by reading your system clipboard and analyzing the image via MCP vision tools or direct API calls.
 
-在使用基于 Claw 的 AI 助手（WorkBuddy、OpenClaw、QClaw 等）时，有时无法直接在聊天中粘贴图片。**Claw Eyes** 通过读取系统剪贴板并将图片传给视觉 API 来解决这个问题。
+在使用基于 Claw 的 AI 助手（WorkBuddy、OpenClaw、QClaw 等）时，有时无法直接在聊天中粘贴图片。**Claw Eyes** 通过读取系统剪贴板并分析图片来解决这个问题。
 
 Just screenshot something, then say "看图" or "look at this" — done!
 
@@ -30,20 +30,20 @@ Just screenshot something, then say "看图" or "look at this" — done!
 ## Features / 特性
 
 - 📋 Reads images directly from system clipboard
-- 🔍 **Dual analysis modes**: Direct API (recommended) + MCP fallback
-- 🚀 **Direct API mode**: Calls vision model API directly — bypasses MCP response bugs on some platforms
-- 🆓 **Free models supported**: `glm-4.6v-flash` (recommended), `Qwen2.5-VL` (SiliconFlow free tier)
+- 🔍 **Dual analysis modes**: MCP (primary, zero config) + Direct API (reliable fallback)
+- 🚀 **MCP first**: Auto-detects available MCP vision tools, no setup needed
+- 🛡️ **Direct API fallback**: Bypasses MCP response bugs on some platforms
+- 🔌 **Provider-agnostic**: Supports Zhipu, SiliconFlow, Kimi, OpenAI, local Ollama — picks the right URL/model per provider
+- 🆓 **Free options**: glm-4.6v-flash, Qwen2.5-VL, llava — all free
 - ⚙️ Configurable via `CLAW_EYES_*` environment variables
 - 🌐 Bilingual triggers (Chinese + English)
 - 🔄 Compatible with **all Claw variants** (WorkBuddy, OpenClaw, QClaw, etc.)
-- 🔑 API key validation on installation — guides users to free options if unconfigured
 
 ## Requirements / 环境要求
 
 - **OS**: Windows (Linux/macOS coming soon)
-- **Vision API** (one of):
-  - A vision-capable API key (智谱 Zhipu, 硅基流动 SiliconFlow, OpenAI, or local Ollama)
-  - A vision MCP tool in your session (fallback mode)
+- **Primary**: A vision-capable MCP tool in your session (auto-detected)
+- **Optional**: A vision API key for Direct API fallback mode
 - **Python** (optional): With Pillow for enhanced clipboard support
 
 ## Installation / 安装
@@ -71,15 +71,12 @@ git clone https://github.com/zwq871482439/claw-eyes.git "$env:USERPROFILE\.workb
 
 ### Post-install Setup / 安装后设置
 
-After installing, you need:
+After installing, the AI will walk you through:
 
-1. ✅ **Set a vision API key** (recommended — enables Direct API mode):
-   ```powershell
-   # Free key from open.bigmodel.cn → glm-4.6v-flash (free, 128K, video/docs)
-   $env:CLAW_EYES_API_KEY = "your_key_here"
-   ```
-2. ✅ Or have a **vision MCP tool** available in your session (fallback mode)
-3. ✅ The AI will run **Vision Capability Check** to detect which mode to use
+1. ✅ **Confirm save path** (default: `%TEMP%\claw-eyes\clipboard.png`)
+2. ✅ **Detect MCP vision tools** (primary mode, zero config)
+3. ✅ **Ask about Direct API mode** (optional enhancement)
+4. ✅ If Direct API → **Ask which provider** → configure URL/model accordingly
 
 ## Configuration / 配置
 
@@ -90,12 +87,14 @@ All env vars use the `CLAW_EYES_` prefix for consistency.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLAW_EYES_SAVE_PATH` | `%TEMP%\claw-eyes\clipboard.png` (Win) | Image save path / 图片保存路径 |
-| `CLAW_EYES_API_KEY` | (none) | Vision API key for Direct API mode / 视觉 API 密钥 |
-| `CLAW_EYES_API_URL` | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | Vision API endpoint / 视觉 API 地址 |
-| `CLAW_EYES_VISION_MODEL` | `glm-4.6v-flash` | Vision model name / 视觉模型名称 |
-| `CLAW_EYES_MCP_SERVER` | auto-detect | MCP server name (fallback) / MCP 服务名（备选） |
-| `CLAW_EYES_MCP_TOOL` | auto-detect | MCP tool name (fallback) / MCP 工具名（备选） |
+| `CLAW_EYES_API_KEY` | (none) | Vision API key (Direct API mode) |
+| `CLAW_EYES_API_URL` | (none) | Vision API endpoint — **must match your provider** |
+| `CLAW_EYES_VISION_MODEL` | (none) | Vision model — **must match your provider** |
+| `CLAW_EYES_MCP_SERVER` | auto-detect | MCP server name (primary mode) |
+| `CLAW_EYES_MCP_TOOL` | auto-detect | MCP tool name (primary mode) |
 | `CLAW_EYES_LANG` | `zh` | Default prompt language / 默认提示语言 |
+
+> ⚠️ **`API_URL` and `VISION_MODEL` have NO defaults.** They must be set together based on your provider. Don't mix providers!
 
 ```powershell
 # Example: 智谱 Zhipu (free, recommended)
@@ -116,12 +115,13 @@ $env:CLAW_EYES_VISION_MODEL = "llava"
 
 ## Compatible API Providers / 兼容的 API 提供商
 
-| Provider | Base URL | Free Models | How to get key |
-|----------|----------|-------------|----------------|
-| 智谱 Zhipu | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4.6v-flash` ⭐ | [open.bigmodel.cn](https://open.bigmodel.cn) |
-| 硅基流动 SiliconFlow | `https://api.siliconflow.cn/v1/chat/completions` | `Qwen/Qwen2.5-VL-7B-Instruct` | [siliconflow.cn](https://siliconflow.cn) |
-| OpenAI | `https://api.openai.com/v1/chat/completions` | None (paid) | [platform.openai.com](https://platform.openai.com) |
-| 本地 Ollama | `http://localhost:11434/v1/chat/completions` | `llava`, `minicpm-v` | No key needed |
+| Provider | API URL | Free Vision Model | How to get key |
+|----------|---------|-------------------|----------------|
+| 智谱 Zhipu ⭐ | `open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4.6v-flash` (128K, video/docs) | [open.bigmodel.cn](https://open.bigmodel.cn) |
+| 硅基流动 SiliconFlow | `api.siliconflow.cn/v1/chat/completions` | `Qwen/Qwen2.5-VL-7B-Instruct` | [siliconflow.cn](https://siliconflow.cn) |
+| Kimi (月之暗面) | `api.moonshot.cn/v1/chat/completions` | Check latest docs | [platform.moonshot.cn](https://platform.moonshot.cn) |
+| OpenAI | `api.openai.com/v1/chat/completions` | None (paid, `gpt-4o`) | [platform.openai.com](https://platform.openai.com) |
+| 本地 Ollama | `localhost:11434/v1/chat/completions` | `llava`, `minicpm-v` | No key needed |
 
 ## Usage / 使用方法
 
@@ -133,11 +133,11 @@ $env:CLAW_EYES_VISION_MODEL = "llava"
 
 ## Analysis Modes / 分析模式
 
-| Mode | Method | Priority | Notes |
-|------|--------|----------|-------|
-| **Mode A** | Direct API | ✅ Recommended | Calls vision API directly via `execute_command`. Response guaranteed to reach AI context. |
-| **Mode B** | MCP Tool | Fallback | Uses MCP vision tool if available. May fail on some platforms due to MCP response bugs. |
-| **Mode C** | None | — | Guides user to set up a vision capability. |
+| Mode | Method | Priority | Config Required | Notes |
+|------|--------|----------|-----------------|-------|
+| **Mode A** | MCP Tool | ✅ Primary | None | Auto-detects MCP vision tools. Works out of the box. |
+| **Mode B** | Direct API | Fallback | API key + URL + model | Bypasses MCP bugs. Reliable fallback. |
+| **Mode C** | None | — | — | Guides user to set up a vision capability. |
 
 ## File Structure / 文件结构
 
@@ -154,19 +154,21 @@ claw-eyes/
 ## How It Works / 工作原理
 
 ```
-Screenshot → Clipboard → Save to disk → Vision API/MCP analyzes → Result
-截图       → 剪贴板   → 保存到本地     → 视觉 API/MCP 分析        → 结果
+Screenshot → Clipboard → Save to disk → MCP analyzes (primary) → Result
+                                          ↓ (if MCP fails)
+                                          Direct API analyzes (fallback) → Result
 ```
 
-**Direct API mode (Mode A)** uses `execute_command` to call vision APIs directly — this bypasses MCP entirely and is the most reliable method on all Claw platforms.
+**MCP mode (primary)** — Uses whatever vision MCP tool is in your session. Zero config, just works.
 
-**MCP mode (Mode B)** uses whatever vision MCP tool is available in your session — simpler setup but less reliable on some platforms.
+**Direct API mode (fallback)** — When MCP fails (response loss, timeout, etc.), falls back to calling your provider's vision API directly. More reliable but requires setup.
 
 ## Roadmap / 路线图
 
-- [x] Direct API mode (bypass MCP, call vision model directly)
-- [x] Vision Capability Check (validate API key + detect vision support)
-- [x] `glm-4.6v-flash` as default model (free, 128K, video/docs)
+- [x] MCP vision tool integration (primary mode, zero config)
+- [x] Direct API fallback mode (bypass MCP response bugs)
+- [x] Provider-agnostic setup (auto-configure based on user's provider)
+- [x] `glm-4.6v-flash` as recommended free model
 - [ ] Linux support (`xclip` / `wl-paste`)
 - [ ] macOS support (`osascript` / `pbpaste`)
 - [ ] Auto-detect available MCP vision tools
