@@ -45,8 +45,11 @@ All configuration uses environment variables with the `CLAW_EYES_` prefix for co
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLAW_EYES_SAVE_PATH` | (auto-detect, see below) | Path where clipboard image is saved |
-| `CLAW_EYES_MCP_SERVER` | (auto-detect) | MCP server name for vision analysis (e.g., `zai`) |
-| `CLAW_EYES_MCP_TOOL` | (auto-detect) | MCP tool name for vision analysis (e.g., `analyze_image`) |
+| `CLAW_EYES_API_KEY` | (none) | Vision API key for Direct API mode |
+| `CLAW_EYES_API_URL` | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | Vision API endpoint |
+| `CLAW_EYES_VISION_MODEL` | `glm-4v-flash` | Vision model name |
+| `CLAW_EYES_MCP_SERVER` | (auto-detect) | MCP server name (fallback mode) |
+| `CLAW_EYES_MCP_TOOL` | (auto-detect) | MCP tool name (fallback mode) |
 | `CLAW_EYES_LANG` | `zh` | Default prompt language (`zh` / `en`) |
 
 **Default save path logic / 默认保存路径逻辑** (when `CLAW_EYES_SAVE_PATH` is not set):
@@ -153,27 +156,73 @@ This step is optional. If compression is not needed or not possible, skip to Ste
 
 ### Step 3: Analyze Image / 第三步：分析图片
 
-Determine the MCP tool to use (from env vars or auto-detect), then analyze:
+**Analysis strategy (pick one in priority order) / 分析策略（按优先级选择）:**
+
+#### Mode A: Direct API (Recommended) / 模式 A：直连 API（推荐）
+
+Call vision model API directly via `execute_command`. Response comes as command output → **guaranteed to reach AI context**.
+
+通过 `execute_command` 直接请求视觉模型 API，响应作为命令输出 → **必定注入 AI 上下文**。
+
+**Environment variables / 环境变量:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAW_EYES_API_KEY` | (none) | Vision API key (e.g. Zhipu, SiliconFlow) |
+| `CLAW_EYES_API_URL` | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | Vision API endpoint |
+| `CLAW_EYES_VISION_MODEL` | `glm-4v-flash` | Vision model name |
+
+**PowerShell script / PowerShell 脚本:**
+
+```powershell
+$imgPath = "<save_path>"
+$bytes = [System.IO.File]::ReadAllBytes($imgPath)
+$base64 = [Convert]::ToBase64String($bytes)
+$dataUri = "data:image/png;base64,$base64"
+$body = @{
+    model = "<CLAW_EYES_VISION_MODEL or glm-4v-flash>"
+    messages = @(
+        @{
+            role = "user"
+            content = @(
+                @{ type = "image_url"; image_url = @{ url = $dataUri } }
+                @{ type = "text"; text = "<prompt based on CLAW_EYES_LANG>" }
+            )
+        }
+    )
+    max_tokens = 1024
+} | ConvertTo-Json -Depth 10
+$headers = @{
+    "Authorization" = "Bearer <CLAW_EYES_API_KEY>"
+    "Content-Type" = "application/json"
+}
+$resp = Invoke-RestMethod -Uri "<CLAW_EYES_API_URL>" -Method POST -Headers $headers -Body $body -TimeoutSec 60
+$resp.choices[0].message.content
+```
+
+**Supported free models / 支持的免费模型:**
+
+| Provider | Model | Free? | Notes |
+|----------|-------|-------|-------|
+| 智谱 Zhipu | `glm-4v-flash` | ✅ Free | Best Chinese support, domestic |
+| 硅基流动 SiliconFlow | `Qwen/Qwen2.5-VL-7B-Instruct` | ✅ Free tier | Domestic, fast |
+| 智谱 Zhipu | `glm-4v` | Paid | Higher quality |
+
+#### Mode B: MCP Tool (Fallback) / 模式 B：MCP 工具（备选）
+
+If Direct API is not configured (`CLAW_EYES_API_KEY` not set), fall back to MCP:
+
+如果未配置 Direct API（`CLAW_EYES_API_KEY` 未设置），降级到 MCP：
 
 ```
-Priority: CLAW_EYES_MCP_SERVER + CLAW_EYES_MCP_TOOL > auto-detect available vision tool
-```
-
-**Critical for performance**: Keep the prompt short and specific. Avoid overly long prompts that increase processing time.
-
-```
-mcp_call_tool: serverName="<detected_server>", toolName="<detected_tool>"
+mcp_call_tool: serverName="<CLAW_EYES_MCP_SERVER>", toolName="<CLAW_EYES_MCP_TOOL>"
 arguments: {
     "image_source": "<save_path>",
-    "prompt": "<concise prompt based on CLAW_EYES_LANG>"
+    "prompt": "<concise prompt>"
 }
 ```
 
-**Timeout handling**: If MCP call times out (30s+), retry once. If still fails:
-1. Tell the user: "图片分析超时，可能因为图片较大或网络问题"
-2. Suggest: re-screenshot with a smaller area, or describe the content verbally
-
-**Important**: Use the actual save path (from Step 1 output) as the image source path.
+⚠️ **Known issue**: On some platforms, MCP responses may not reach AI context. If the user reports seeing results but AI got nothing, switch to Mode A.
 
 ### Step 4: Return Results / 第四步：返回分析结果
 
@@ -203,10 +252,12 @@ claw-eyes/
 - If user hasn't screenshot yet, remind them: `Win + Shift + S` (Windows)
 - The Python script (`scripts/read_clipboard.py`) supports Pillow with PowerShell fallback
 - All env vars use `CLAW_EYES_` prefix — consistent across Claw platforms
-- **Known issue**: On some platforms (e.g. WorkBuddy v4.10.0 with GLM-5.1), MCP tool responses may not be injected into AI context (the user can see results in UI but AI receives empty). If this happens, ask the user to relay the MCP analysis results manually.
+- **Known issue**: On some platforms, MCP tool responses may not reach AI context. Direct API mode (Mode A) bypasses this by using `execute_command` to call vision API directly — response is guaranteed to reach AI context as command output.
+- **Recommended setup**: Set `CLAW_EYES_API_KEY` to enable Direct API mode for reliable image analysis.
 
 ## Roadmap / 路线图
 
+- [x] Direct API mode (bypass MCP, call vision model directly via execute_command)
 - [ ] Linux support (`xclip`/`wl-paste` clipboard access)
 - [ ] macOS support (`osascript`/`pbpaste` clipboard access)
 - [ ] Auto-detect available MCP vision tools (not just `zai`)
