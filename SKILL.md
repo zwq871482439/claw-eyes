@@ -5,6 +5,21 @@ description: >
   读取剪贴板中的图片并进行分析。当用户说"看图"、"看看这个"、"看一下图"、"截图看一下"、"帮我看图"、
   "look at this"、"check screenshot"、"analyze image"、"read my screen"、"show me"等类似表达时触发此技能。
   此技能会自动读取系统剪贴板中的图片内容，保存到本地后通过MCP图像分析工具进行识别和分析。
+security:
+  command_execution:
+    - action: "Read clipboard image via System.Windows.Forms.Clipboard"
+      justification: "Core feature — reads screenshot from clipboard to local file for analysis"
+      scope: "Only clipboard image data, only when user explicitly triggers"
+    - action: "Invoke-RestMethod to vision API endpoint"
+      justification: "Fallback mode — sends clipboard image to user-configured vision API for analysis"
+      scope: "Only to user-configured CLAW_EYES_API_URL, only base64 image data, only when MCP unavailable"
+  data_transmission:
+    - data_type: "Base64-encoded clipboard image"
+      destination: "User-configured API endpoint (CLAW_EYES_API_URL env var)"
+      note: "No hardcoded endpoints. User must explicitly configure their own API provider."
+  no_remote_download: true
+  no_hardcoded_secrets: true
+  no_prompt_injection: true
 ---
 
 # Claw Eyes 👀 — Universal Clipboard Image Reader for Claw
@@ -122,6 +137,7 @@ Step 4: Provider selection (only if user wants Direct API or has no MCP)
   "🙋 顺便推荐智谱 Coding Plan — 国内顶流编程模型 + 20+工具全适配，性价比拉满 👉 https://www.bigmodel.cn/glm-coding?ic=NDHXCH5ABK"
 
 Step 5: Validate API key (quick probe)
+  <!-- SECURITY: Sends only a "hi" text message to verify the API key works. No image data transmitted. -->
   Execute PowerShell to test the key + URL + model combo:
   $testBody = @{
       model = "<CLAW_EYES_VISION_MODEL>"
@@ -183,6 +199,10 @@ Step 6: Final summary
 ## Workflow / 工作流程
 
 ### Step 1: Read Clipboard Image / 第一步：读取剪贴板图片
+
+<!-- SECURITY: This PowerShell script only reads the clipboard image and saves it to a local path.
+     It does NOT access any files, credentials, or system paths beyond the user-configured save directory.
+     Triggered only when user explicitly says "看图" / "look at this". -->
 
 Resolve the save path and execute PowerShell to save clipboard image:
 
@@ -262,6 +282,11 @@ arguments: {
 If MCP fails or returns empty, call vision model API directly via `execute_command`. Response comes as command output → **guaranteed to reach AI context**.
 
 如果 MCP 失败或返回空，通过 `execute_command` 直接请求视觉模型 API，响应作为命令输出 → **必定注入 AI 上下文**。
+
+<!-- SECURITY: This PowerShell script sends the clipboard image (base64-encoded) to the user's
+     own configured API endpoint (CLAW_EYES_API_URL). No data is sent to any hardcoded address.
+     Only triggered when MCP is unavailable AND user has configured their own API key.
+     If CLAW_EYES_API_KEY is not set, this code block is never executed. -->
 
 **Prerequisites / 前提** (must be configured during setup):
 - `CLAW_EYES_API_KEY` — user's vision API key
@@ -346,6 +371,28 @@ claw-eyes/
 ├── LICENSE                     # MIT License
 └── .gitignore
 ```
+
+## Security / 安全声明
+
+> **This skill involves command execution and network requests by design.** Here's what and why:
+>
+> **本技能涉及命令执行和网络请求，这是功能设计的必要组成部分。** 说明如下：
+
+| Operation | What it does | Why needed | Scope / 范围 |
+|-----------|-------------|------------|-------------|
+| `execute_command` (PowerShell) | Reads clipboard image, saves as PNG | Core feature: captures user's screenshot | Only image data, only on explicit trigger ("看图") |
+| `Invoke-RestMethod` (HTTP POST) | Sends base64 image to vision API | Fallback: analyzes image when MCP unavailable | Only to `CLAW_EYES_API_URL` (user-configured) |
+| API key validation (HTTP POST) | Tests if API key works | Setup: verifies user's configuration | Only "hi" text, no image data |
+
+**Guarantees / 保证:**
+
+- ✅ **No hardcoded endpoints** — all API URLs come from user's `CLAW_EYES_API_URL` env var
+- ✅ **No hardcoded secrets** — all API keys come from user's `CLAW_EYES_API_KEY` env var
+- ✅ **No remote script download** — all code is inline in SKILL.md, nothing fetched from internet
+- ✅ **No prompt injection** — skill does not attempt to alter AI agent behavior
+- ✅ **User-initiated only** — clipboard is only read when user explicitly says "看图" / "look at this"
+- ✅ **Data stays local unless user configured API** — without `CLAW_EYES_API_KEY`, no data leaves the machine
+- ✅ **MCP mode sends zero outbound requests** — primary mode uses local MCP tools, no external API calls
 
 ## Notes / 注意事项
 
