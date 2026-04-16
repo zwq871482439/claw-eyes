@@ -73,7 +73,7 @@ The directory is auto-created on first use. No manual setup needed unless you wa
 1. ✅ Tell the user the resolved save path (default or custom)
 2. ✅ **Ask the user to confirm** if they want to keep that path or change it
 3. ✅ If the user wants a different path, set `CLAW_EYES_SAVE_PATH` accordingly
-4. ✅ Verify a vision-capable MCP tool is available in the current session
+4. ✅ Run the **Vision Capability Check** below to determine which analysis mode to use
 
 Example interaction / 示例交互：
 
@@ -84,6 +84,72 @@ AI: "Claw Eyes 已安装！剪贴板图片将保存到：
 User: "换成 D:\screenshots\clip.png 吧"
 AI: [sets CLAW_EYES_SAVE_PATH env var] "搞定！已改为 D:\screenshots\clip.png"
 ```
+
+### Vision Capability Check / 视觉能力检测
+
+**Run this check after installation to determine available analysis mode.**
+
+**安装后运行此检测，确定可用的分析模式。**
+
+Check in this order / 按以下顺序检测：
+
+```
+Step 1: Check CLAW_EYES_API_KEY env var
+  ├─ Set? → Run Step 2 (API validation)
+  └─ Not set? → Check Step 3 (MCP availability)
+
+Step 2: Validate API key (probe request)
+  Execute this PowerShell to test the key works AND the model supports vision:
+
+  $testBody = @{
+      model = "<CLAW_EYES_VISION_MODEL or glm-4v-flash>"
+      messages = @(
+          @{ role = "user"; content = "hi" }
+      )
+      max_tokens = 5
+  } | ConvertTo-Json -Depth 5
+  $headers = @{
+      "Authorization" = "Bearer <CLAW_EYES_API_KEY>"
+      "Content-Type" = "application/json"
+  }
+  try {
+      $resp = Invoke-RestMethod -Uri "<CLAW_EYES_API_URL>" -Method POST -Headers $headers -Body $testBody -TimeoutSec 15
+      Write-Output "API_OK"
+  } catch {
+      Write-Output "API_ERROR: $($_.Exception.Message)"
+  }
+
+  ├─ API_OK → Mode A ready ✅ (test vision separately on first use)
+  └─ API_ERROR → Key invalid or endpoint unreachable, inform user
+
+Step 3: Check MCP vision tool availability
+  ├─ mcp_get_tool_description returns tool info? → Mode B ready ✅
+  └─ No MCP vision tool found? → inform user (see below)
+
+Step 4: No vision capability found at all
+  → Tell the user:
+     "⚠️ Claw Eyes needs a vision-capable API to analyze images. Please do ONE of:
+      1. Get a free API key from:
+         - 智谱 (zhipu.cn) → glm-4v-flash (free, recommended)
+         - 硅基流动 (siliconflow.cn) → Qwen2.5-VL (free tier)
+      2. Set it: set CLAW_EYES_API_KEY=your_key
+      3. Or install a vision MCP server (e.g. @z_ai/mcp-server)
+     Then reload this skill."
+```
+
+**Compatible API providers / 兼容的 API 提供商:**
+
+| Provider | Base URL | Free Models | How to get key |
+|----------|----------|-------------|----------------|
+| 智谱 Zhipu | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4v-flash` | open.bigmodel.cn 注册 |
+| 硅基流动 SiliconFlow | `https://api.siliconflow.cn/v1/chat/completions` | `Qwen/Qwen2.5-VL-7B-Instruct` | siliconflow.cn 注册 |
+| OpenAI | `https://api.openai.com/v1/chat/completions` | None (paid) | platform.openai.com |
+| 本地 Ollama | `http://localhost:11434/v1/chat/completions` | `llava`, `minicpm-v` | No key needed |
+
+**⚠️ Important: Not all models support vision!**
+- ❌ Pure text models (GPT-3.5, glm-4-flash, Qwen2.5-7B etc.) CANNOT analyze images
+- ✅ Vision models (glm-4v-flash, gpt-4o, Qwen2.5-VL, llava etc.) CAN analyze images
+- The model name must contain vision capability: check provider docs before configuring
 
 ## Triggers / 触发条件
 
@@ -210,9 +276,9 @@ $resp.choices[0].message.content
 
 #### Mode B: MCP Tool (Fallback) / 模式 B：MCP 工具（备选）
 
-If Direct API is not configured (`CLAW_EYES_API_KEY` not set), fall back to MCP:
+If Direct API is not configured (`CLAW_EYES_API_KEY` not set), try MCP:
 
-如果未配置 Direct API（`CLAW_EYES_API_KEY` 未设置），降级到 MCP：
+如果未配置 Direct API（`CLAW_EYES_API_KEY` 未设置），尝试 MCP：
 
 ```
 mcp_call_tool: serverName="<CLAW_EYES_MCP_SERVER>", toolName="<CLAW_EYES_MCP_TOOL>"
@@ -222,7 +288,18 @@ arguments: {
 }
 ```
 
-⚠️ **Known issue**: On some platforms, MCP responses may not reach AI context. If the user reports seeing results but AI got nothing, switch to Mode A.
+⚠️ **Known issue**: On some platforms, MCP responses may not reach AI context. If the user reports seeing results but AI got nothing, suggest switching to Mode A.
+
+#### Mode C: No Capability / 模式 C：无视觉能力
+
+If neither Mode A nor Mode B is available:
+
+如果 Mode A 和 Mode B 都不可用：
+
+1. Tell the user: "当前没有可用的视觉分析能力，无法分析截图"
+2. Ask the user to configure one of the options in the Vision Capability Check section
+3. Suggest free options first (智谱 glm-4v-flash, 硅基流动 Qwen2.5-VL)
+4. For local model users: suggest installing Ollama + a vision model (llava, minicpm-v)
 
 ### Step 4: Return Results / 第四步：返回分析结果
 
