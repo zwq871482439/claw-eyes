@@ -4,51 +4,65 @@ description: >
   Read clipboard images and analyze them via MCP vision tools.
   读取剪贴板中的图片并进行分析。当用户说"看图"、"看看这个"、"看一下图"、"截图看一下"、"帮我看图"、
   "look at this"、"check screenshot"、"analyze image"、"read my screen"、"show me"等类似表达时触发此技能。
-  此技能会自动读取Windows剪贴板中的图片内容，保存到本地后通过MCP图像分析工具进行识别和分析。
+  此技能会自动读取系统剪贴板中的图片内容，保存到本地后通过MCP图像分析工具进行识别和分析。
 ---
 
-# Claw Eyes 👀 - Clipboard Image Reader & Analyzer
+# Claw Eyes 👀 — Universal Clipboard Image Reader for Claw
 
 ## Overview / 概述
 
-This skill reads images from the Windows system clipboard and analyzes them using MCP vision tools.
-It bridges the gap when users cannot directly send images through the chat interface.
+Claw Eyes is a universal clipboard image reader skill designed for **any Claw-based AI assistant** (WorkBuddy, OpenClaw, QClaw, etc.). It reads system clipboard images and passes them to MCP vision tools for analysis.
 
-此技能用于在用户无法通过聊天框直接发送图片时，通过读取Windows系统剪贴板来获取图片内容并进行分析。
+Claw Eyes 是一个通用的剪贴板图片读取技能，设计用于**任何基于 Claw 的 AI 助手**（WorkBuddy、OpenClaw、QClaw 等）。通过读取系统剪贴板并将图片传给 MCP 视觉分析工具来工作。
+
+## Platform Support / 平台支持
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| Windows | ✅ Supported | Uses `System.Windows.Forms` |
+| Linux | 🔜 Planned | Will use `xclip`/`wl-paste` |
+| macOS | 🔜 Planned | Will use `osascript`/`pbpaste` |
+
+> **Current version only supports Windows.** Linux and macOS support is on the roadmap.
+>
+> **当前版本仅支持 Windows。** Linux 和 macOS 支持已在路线图中。
 
 ## Requirements / 环境要求
 
-- **OS**: Windows (relies on `System.Windows.Forms`)
-- **MCP**: A vision-capable MCP tool (e.g., `zai/analyze_image`)
+- **OS**: Windows (Linux/macOS coming soon)
+- **MCP**: A vision-capable MCP tool (e.g., `zai/analyze_image`, or any tool that accepts an image file path)
 - **Optional**: Python with Pillow (`pip install Pillow`) for enhanced clipboard support
+- **Compatible with**: Any Claw-based AI assistant (WorkBuddy, OpenClaw, QClaw, etc.)
 
 ## Configuration / 配置
 
-### Environment Variable / 环境变量
+All configuration uses environment variables with the `CLAW_EYES_` prefix for consistency across different Claw platforms.
+
+所有配置使用 `CLAW_EYES_` 前缀的环境变量，确保跨平台一致性。
+
+### Environment Variables / 环境变量
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CLIPBOARD_SAVE_PATH` | `C:\tmp\_clipboard\clipboard.png` | Path where clipboard image is saved |
-
-Set it before using if you want a custom location:
-
-```powershell
-# PowerShell
-$env:CLIPBOARD_SAVE_PATH = "D:\my-path\clip.png"
-```
-
-```bash
-# Bash
-export CLIPBOARD_SAVE_PATH="/tmp/clip.png"
-```
+| `CLAW_EYES_SAVE_PATH` | `C:\tmp\_clipboard\clipboard.png` | Path where clipboard image is saved |
+| `CLAW_EYES_MCP_SERVER` | (auto-detect) | MCP server name for vision analysis (e.g., `zai`) |
+| `CLAW_EYES_MCP_TOOL` | (auto-detect) | MCP tool name for vision analysis (e.g., `analyze_image`) |
+| `CLAW_EYES_LANG` | `zh` | Default prompt language (`zh` / `en`) |
 
 ### Pre-install Check / 安装前检查
 
 When installing this skill, the AI assistant should verify:
 
-1. The save directory exists (or can be created automatically)
-2. The `CLIPBOARD_SAVE_PATH` environment variable is set (or the default path is acceptable)
-3. A vision-capable MCP tool is available in the current session
+1. ✅ The save directory exists (or can be created automatically)
+2. ✅ `CLAW_EYES_SAVE_PATH` is set or the default path is acceptable
+3. ✅ A vision-capable MCP tool is available in the current session
+4. ✅ The AI detects which Claw platform it's running on (optional, for logging)
+
+```powershell
+# Quick check / 快速检查
+echo $env:CLAW_EYES_SAVE_PATH    # Should show save path or be empty (use default)
+echo $env:CLAW_EYES_MCP_SERVER   # Should show MCP server name or be empty (auto-detect)
+```
 
 ## Triggers / 触发条件
 
@@ -70,13 +84,21 @@ When installing this skill, the AI assistant should verify:
 
 ### Step 1: Read Clipboard Image / 第一步：读取剪贴板图片
 
-Execute PowerShell to save clipboard image:
+Resolve the save path and execute PowerShell to save clipboard image:
 
 ```powershell
-$savePath = if ($env:CLIPBOARD_SAVE_PATH) { $env:CLIPBOARD_SAVE_PATH } else { 'C:\tmp\_clipboard\clipboard.png' }
+$savePath = if ($env:CLAW_EYES_SAVE_PATH) { $env:CLAW_EYES_SAVE_PATH } else { 'C:\tmp\_clipboard\clipboard.png' }
 $dir = Split-Path $savePath -Parent
 if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-powershell -Command "Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $img = [System.Windows.Forms.Clipboard]::GetImage(); if ($img -ne $null) { $img.Save('$savePath', [System.Drawing.Imaging.ImageFormat]::Png); Write-Output 'OK' } else { Write-Output 'NO_IMAGE' }"
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$img = [System.Windows.Forms.Clipboard]::GetImage()
+if ($img -ne $null) {
+    $img.Save($savePath, [System.Drawing.Imaging.ImageFormat]::Png)
+    Write-Output "OK"
+} else {
+    Write-Output "NO_IMAGE"
+}
 ```
 
 - Output `OK` → Image found, proceed to step 2
@@ -84,16 +106,21 @@ powershell -Command "Add-Type -AssemblyName System.Windows.Forms; Add-Type -Asse
 
 ### Step 2: Analyze Image / 第二步：分析图片
 
-Use MCP tool to analyze the saved image:
+Determine the MCP tool to use (from env vars or auto-detect), then analyze:
 
 ```
-mcp_call_tool: serverName="zai", toolName="analyze_image"
-arguments: {"image_source": "<CLIPBOARD_SAVE_PATH value>", "prompt": "请详细描述这张图片的内容，包括文字、界面元素、数据等所有可见信息。Please describe the content of this image in detail, including text, UI elements, data, and all visible information."}
+Priority: CLAW_EYES_MCP_SERVER + CLAW_EYES_MCP_TOOL > auto-detect available vision tool
 ```
 
-**Important**: Use the actual `CLIPBOARD_SAVE_PATH` value (or default) as `image_source`.
+```
+mcp_call_tool: serverName="<detected_server>", toolName="<detected_tool>"
+arguments: {
+    "image_source": "<CLAW_EYES_SAVE_PATH value>",
+    "prompt": "<based on CLAW_EYES_LANG, describe image in detail>"
+}
+```
 
-If `zai/analyze_image` is unavailable, try any other vision-capable MCP tool.
+**Important**: Use the actual `CLAW_EYES_SAVE_PATH` value (or default) as the image source path.
 
 ### Step 3: Return Results / 第三步：返回分析结果
 
@@ -104,9 +131,30 @@ Return the analysis in natural language. Adapt response based on content:
 - **Document/table** → Extract text and data
 - **Code screenshot** → Recognize and reproduce code content
 
+## File Structure / 文件结构
+
+```
+claw-eyes/
+├── SKILL.md                    # This file / 本文件
+├── scripts/
+│   └── read_clipboard.py       # Python clipboard reader / Python 剪贴板读取脚本
+├── README.md                   # Project README
+├── LICENSE                     # MIT License
+└── .gitignore
+```
+
 ## Notes / 注意事项
 
 - Image is overwritten on each use — no cleanup needed
-- Windows-only (depends on `System.Windows.Forms`)
-- If user hasn't screenshot yet, remind them: `Win + Shift + S`
-- The Python script (`scripts/read_clipboard.py`) is an alternative — it supports Pillow with PowerShell fallback
+- Windows-only in current version (Linux/macOS coming soon)
+- If user hasn't screenshot yet, remind them: `Win + Shift + S` (Windows)
+- The Python script (`scripts/read_clipboard.py`) supports Pillow with PowerShell fallback
+- All env vars use `CLAW_EYES_` prefix — consistent across Claw platforms
+
+## Roadmap / 路线图
+
+- [ ] Linux support (`xclip`/`wl-paste` clipboard access)
+- [ ] macOS support (`osascript`/`pbpaste` clipboard access)
+- [ ] Auto-detect available MCP vision tools (not just `zai`)
+- [ ] Multi-image clipboard support (if multiple images copied)
+- [ ] Clipboard history mode (analyze previously copied images)
