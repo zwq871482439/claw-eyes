@@ -203,6 +203,7 @@ claw-eyes/
 - If user hasn't screenshot yet, remind them: `Win + Shift + S` (Windows)
 - The Python script (`scripts/read_clipboard.py`) supports Pillow with PowerShell fallback
 - All env vars use `CLAW_EYES_` prefix — consistent across Claw platforms
+- **Known issue**: On some platforms (e.g. WorkBuddy v4.10.0 with GLM-5.1), MCP tool responses may not be injected into AI context (the user can see results in UI but AI receives empty). If this happens, ask the user to relay the MCP analysis results manually.
 
 ## Roadmap / 路线图
 
