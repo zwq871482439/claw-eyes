@@ -79,9 +79,9 @@ All env vars use the `CLAW_EYES_` prefix for consistency.
 
 所有环境变量统一使用 `CLAW_EYES_` 前缀。
 
-| Variable | Default (Win) | Description |
-|----------|---------------|-------------|
-| `CLAW_EYES_SAVE_PATH` | `C:\tmp\_clipboard\clipboard.png` | Image save path / 图片保存路径 |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAW_EYES_SAVE_PATH` | `%TEMP%\claw-eyes\clipboard.png` (Win) | Image save path / 图片保存路径 |
 | `CLAW_EYES_MCP_SERVER` | auto-detect | MCP server name for vision / MCP 视觉服务名 |
 | `CLAW_EYES_MCP_TOOL` | auto-detect | MCP tool name for vision / MCP 视觉工具名 |
 | `CLAW_EYES_LANG` | `zh` | Default prompt language / 默认提示语言 |

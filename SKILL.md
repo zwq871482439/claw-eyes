@@ -44,24 +44,42 @@ All configuration uses environment variables with the `CLAW_EYES_` prefix for co
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CLAW_EYES_SAVE_PATH` | `C:\tmp\_clipboard\clipboard.png` | Path where clipboard image is saved |
+| `CLAW_EYES_SAVE_PATH` | (auto-detect, see below) | Path where clipboard image is saved |
 | `CLAW_EYES_MCP_SERVER` | (auto-detect) | MCP server name for vision analysis (e.g., `zai`) |
 | `CLAW_EYES_MCP_TOOL` | (auto-detect) | MCP tool name for vision analysis (e.g., `analyze_image`) |
 | `CLAW_EYES_LANG` | `zh` | Default prompt language (`zh` / `en`) |
 
-### Pre-install Check / 安装前检查
+**Default save path logic / 默认保存路径逻辑** (when `CLAW_EYES_SAVE_PATH` is not set):
 
-When installing this skill, the AI assistant should verify:
+| Platform | Default Path |
+|----------|-------------|
+| Windows | `%TEMP%\claw-eyes\clipboard.png` |
+| Linux | `/tmp/claw-eyes/clipboard.png` |
+| macOS | `$TMPDIR/claw-eyes/clipboard.png` |
 
-1. ✅ The save directory exists (or can be created automatically)
-2. ✅ `CLAW_EYES_SAVE_PATH` is set or the default path is acceptable
-3. ✅ A vision-capable MCP tool is available in the current session
-4. ✅ The AI detects which Claw platform it's running on (optional, for logging)
+The directory is auto-created on first use. No manual setup needed unless you want a custom location.
 
-```powershell
-# Quick check / 快速检查
-echo $env:CLAW_EYES_SAVE_PATH    # Should show save path or be empty (use default)
-echo $env:CLAW_EYES_MCP_SERVER   # Should show MCP server name or be empty (auto-detect)
+目录会在首次使用时自动创建，无需手动设置（除非你想自定义位置）。
+
+### Post-install Confirmation / 安装后确认
+
+**This step is mandatory.** After installing this skill, the AI assistant MUST:
+
+**此步骤必做。** 安装此技能后，AI 助手必须：
+
+1. ✅ Tell the user the resolved save path (default or custom)
+2. ✅ **Ask the user to confirm** if they want to keep that path or change it
+3. ✅ If the user wants a different path, set `CLAW_EYES_SAVE_PATH` accordingly
+4. ✅ Verify a vision-capable MCP tool is available in the current session
+
+Example interaction / 示例交互：
+
+```
+AI: "Claw Eyes 已安装！剪贴板图片将保存到：
+     C:\Users\xxx\AppData\Local\Temp\claw-eyes\clipboard.png
+     这个路径可以吗？还是你想换一个？"
+User: "换成 D:\screenshots\clip.png 吧"
+AI: [sets CLAW_EYES_SAVE_PATH env var] "搞定！已改为 D:\screenshots\clip.png"
 ```
 
 ## Triggers / 触发条件
@@ -87,7 +105,8 @@ echo $env:CLAW_EYES_MCP_SERVER   # Should show MCP server name or be empty (auto
 Resolve the save path and execute PowerShell to save clipboard image:
 
 ```powershell
-$savePath = if ($env:CLAW_EYES_SAVE_PATH) { $env:CLAW_EYES_SAVE_PATH } else { 'C:\tmp\_clipboard\clipboard.png' }
+# Resolve save path: env var > system temp fallback
+$savePath = if ($env:CLAW_EYES_SAVE_PATH) { $env:CLAW_EYES_SAVE_PATH } else { Join-Path $env:TEMP 'claw-eyes\clipboard.png' }
 $dir = Split-Path $savePath -Parent
 if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 Add-Type -AssemblyName System.Windows.Forms

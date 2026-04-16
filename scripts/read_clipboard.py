@@ -3,29 +3,38 @@ Read system clipboard image and save to local file.
 Supports Windows (current), Linux and macOS (planned).
 
 Usage: python read_clipboard.py [output_path]
-Default path is determined by CLAW_EYES_SAVE_PATH env var,
-falling back to OS-specific defaults.
+Default path is determined by:
+  1. CLAW_EYES_SAVE_PATH env var (highest priority)
+  2. Platform-specific temp directory fallback
 """
 import sys
 import os
 import platform
+import tempfile
 
 
 def get_default_path():
-    """Get save path from env var or use OS-specific default."""
+    """Get save path with smart defaults per platform.
+
+    Priority:
+      1. CLAW_EYES_SAVE_PATH env var
+      2. System temp directory / claw-eyes / clipboard.png
+    """
     # Env var takes priority
     env_path = os.environ.get("CLAW_EYES_SAVE_PATH")
     if env_path:
         return env_path
 
-    # OS-specific defaults
+    # Smart default: use system temp dir
     system = platform.system()
     if system == "Windows":
-        return os.path.join(os.environ.get("TEMP", "C:\\tmp"), "_clipboard", "clipboard.png")
-    elif system == "Darwin":  # macOS
-        return "/tmp/claw-eyes/clipboard.png"
-    else:  # Linux
-        return "/tmp/claw-eyes/clipboard.png"
+        temp_base = os.environ.get("TEMP", os.environ.get("TMP", tempfile.gettempdir()))
+    elif system == "Darwin":
+        temp_base = tempfile.gettempdir()
+    else:
+        temp_base = tempfile.gettempdir()
+
+    return os.path.join(temp_base, "claw-eyes", "clipboard.png")
 
 
 def read_clipboard_windows(output_path):
