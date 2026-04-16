@@ -105,7 +105,6 @@ AI: [sets CLAW_EYES_SAVE_PATH env var] "搞定！已改为 D:\screenshots\clip.p
 Resolve the save path and execute PowerShell to save clipboard image:
 
 ```powershell
-# Resolve save path: env var > system temp fallback
 $savePath = if ($env:CLAW_EYES_SAVE_PATH) { $env:CLAW_EYES_SAVE_PATH } else { Join-Path $env:TEMP 'claw-eyes\clipboard.png' }
 $dir = Split-Path $savePath -Parent
 if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
@@ -114,16 +113,45 @@ Add-Type -AssemblyName System.Drawing
 $img = [System.Windows.Forms.Clipboard]::GetImage()
 if ($img -ne $null) {
     $img.Save($savePath, [System.Drawing.Imaging.ImageFormat]::Png)
-    Write-Output "OK"
+    Write-Output "OK:$savePath Size:$($img.Width)x$($img.Height)"
 } else {
     Write-Output "NO_IMAGE"
 }
 ```
 
-- Output `OK` → Image found, proceed to step 2
+- Output `OK:...` → Image found, proceed to step 2
 - Output `NO_IMAGE` → No image in clipboard, remind user to screenshot first
 
-### Step 2: Analyze Image / 第二步：分析图片
+### Step 2: Optimize Image / 第二步：图片优化（可选）
+
+If the saved image is larger than **800KB**, auto-compress to reduce MCP transfer time:
+
+```powershell
+$fileSize = (Get-Item $savePath).Length
+if ($fileSize -gt 819200) {
+    Add-Type -AssemblyName System.Drawing
+    $bmp = [System.Drawing.Image]::FromFile($savePath)
+    $ratio = [Math]::Min(1920 / $bmp.Width, 1080 / $bmp.Height)
+    if ($ratio -lt 1) {
+        $newW = [int]($bmp.Width * $ratio)
+        $newH = [int]($bmp.Height * $ratio)
+        $newBmp = [System.Drawing.Bitmap]::new($newW, $newH)
+        $g = [System.Drawing.Graphics]::FromImage($newBmp)
+        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        $g.DrawImage($bmp, 0, 0, $newW, $newH)
+        $newBmp.Save($savePath, [System.Drawing.Imaging.ImageFormat]::Png)
+        $g.Dispose(); $newBmp.Dispose()
+    }
+    $bmp.Dispose()
+    Write-Output "COMPRESSED"
+} else {
+    Write-Output "SKIP"
+}
+```
+
+This step is optional. If compression is not needed or not possible, skip to Step 3.
+
+### Step 3: Analyze Image / 第三步：分析图片
 
 Determine the MCP tool to use (from env vars or auto-detect), then analyze:
 
@@ -131,17 +159,23 @@ Determine the MCP tool to use (from env vars or auto-detect), then analyze:
 Priority: CLAW_EYES_MCP_SERVER + CLAW_EYES_MCP_TOOL > auto-detect available vision tool
 ```
 
+**Critical for performance**: Keep the prompt short and specific. Avoid overly long prompts that increase processing time.
+
 ```
 mcp_call_tool: serverName="<detected_server>", toolName="<detected_tool>"
 arguments: {
-    "image_source": "<CLAW_EYES_SAVE_PATH value>",
-    "prompt": "<based on CLAW_EYES_LANG, describe image in detail>"
+    "image_source": "<save_path>",
+    "prompt": "<concise prompt based on CLAW_EYES_LANG>"
 }
 ```
 
-**Important**: Use the actual `CLAW_EYES_SAVE_PATH` value (or default) as the image source path.
+**Timeout handling**: If MCP call times out (30s+), retry once. If still fails:
+1. Tell the user: "图片分析超时，可能因为图片较大或网络问题"
+2. Suggest: re-screenshot with a smaller area, or describe the content verbally
 
-### Step 3: Return Results / 第三步：返回分析结果
+**Important**: Use the actual save path (from Step 1 output) as the image source path.
+
+### Step 4: Return Results / 第四步：返回分析结果
 
 Return the analysis in natural language. Adapt response based on content:
 
