@@ -1,4 +1,4 @@
-# claw-eyes.ps1 — Claw Eyes unified script
+﻿# claw-eyes.ps1 — Claw Eyes unified script
 # All-in-one: clipboard read, image compress, vision API call, key validation
 # Usage:
 #   .\claw-eyes.ps1 -Action read      — Read clipboard image + auto-compress
