@@ -10,12 +10,14 @@ Usage:
   python claw-eyes.py analyze "prompt"    — Send image with custom prompt
   python claw-eyes.py validate            — Test if API key/URL/model combo works
 
-Environment variables:
+Environment variables (or .env file in script directory):
   CLAW_EYES_SAVE_PATH     — Custom save path (default: <temp>/claw-eyes/clipboard.png)
   CLAW_EYES_API_KEY       — Vision API key
   CLAW_EYES_API_URL       — Vision API endpoint (OpenAI-compatible chat/completions)
   CLAW_EYES_VISION_MODEL  — Vision model name
   CLAW_EYES_LANG          — Prompt language: zh (default) / en
+
+Config priority: env vars > .env file > defaults
 """
 
 import sys
@@ -28,11 +30,35 @@ import subprocess
 from pathlib import Path
 from io import BytesIO
 
+# Fix Windows GBK stdout — API responses may contain emoji/unicode
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 try:
     from PIL import Image, ImageGrab
 except ImportError:
     print("ERROR:Pillow not installed. Run: pip install Pillow")
     sys.exit(1)
+
+# --- Load .env file (env vars take precedence) ---
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_ENV_FILE = os.path.join(_SCRIPT_DIR, ".env")
+
+if os.path.exists(_ENV_FILE):
+    with open(_ENV_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip("'\"")
+                # Only set if not already in environment (env vars > .env)
+                if key and key not in os.environ:
+                    os.environ[key] = value
 
 # --- Constants ---
 MAX_FILE_SIZE = 800 * 1024  # 800KB threshold
@@ -194,11 +220,12 @@ def send_vision_request():
             content = result["choices"][0]["message"]["content"]
             print(content)
     except urllib.error.HTTPError as e:
-        if e.code == 429:
-            print("RATE_LIMITED:API rate limit reached. Please wait and try again.")
-        else:
+        err_body = ""
+        try:
             err_body = e.read().decode("utf-8", errors="replace")
-            print(f"ERROR:HTTP {e.code} — {err_body[:300]}")
+        except Exception:
+            pass
+        print(f"ERROR:HTTP {e.code} — {err_body[:500]}")
     except Exception as e:
         print(f"ERROR:{e}")
 

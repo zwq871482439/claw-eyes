@@ -84,25 +84,22 @@ security:
 
 ### 🇨🇳 国内供应商 / Domestic
 
-| # | Provider / 供应商 | API URL | Free Vision Model / 免费视觉模型 | Get Key / 获取密钥 |
+| # | Provider / 供应商 | API URL | Free Vision Model / 免费视觉模型 ⭐ | Paid / 付费 |
 |---|---|---|---|---|
-| 1 | **智谱 Zhipu** ⭐ | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4.6v-flash` (128K) | [open.bigmodel.cn](https://open.bigmodel.cn) |
-| 2 | **硅基流动 SiliconFlow** | `https://api.siliconflow.cn/v1/chat/completions` | `Qwen/Qwen2.5-VL-7B-Instruct` | [siliconflow.cn](https://siliconflow.cn) |
-| 3 | **阿里云百炼 DashScope** | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` | `qwen-vl-max` (free tier) | [dashscope.console.aliyun.com](https://dashscope.console.aliyun.com) |
-| 4 | **火山引擎 Volcengine** | `https://ark.cn-beijing.volces.com/api/v3/chat/completions` | `doubao-1.5-vision-pro-32k` | [console.volcengine.com/ark](https://console.volcengine.com/ark) |
-| 5 | **百度千帆 Qianfan** | `https://qianfan.baidubce.com/v2/chat/completions` | `ernie-4.5-vl` (free tier) | [console.bce.baidu.com/qianfan](https://console.bce.baidu.com/qianfan) |
+| 1 | **智谱 Zhipu** ⭐ | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4v-flash`（稳定推荐）/ `glm-4.6v-flash`（旗舰，可能限频） | — |
+| 2 | **硅基流动 SiliconFlow** | `https://api.siliconflow.cn/v1/chat/completions` | `Qwen/Qwen2.5-VL-7B-Instruct` | — |
+| 3 | **阿里云百炼 DashScope** | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` | `qwen-vl-max`（免费额度） | — |
+| 4 | **火山引擎 Volcengine** | `https://ark.cn-beijing.volces.com/api/v3/chat/completions` | `doubao-1.5-vision-pro-32k`（免费额度） | — |
+| 5 | **百度千帆 Qianfan** | `https://qianfan.baidubce.com/v2/chat/completions` | `ernie-4.5-vl`（免费额度） | — |
+| 6 | **OpenAI** | `https://api.openai.com/v1/chat/completions` | — | `gpt-4o` 💰 |
+| 7 | **Google Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | `gemini-2.0-flash`（免费额度） | — |
+| 8 | **Groq** | `https://api.groq.com/openai/v1/chat/completions` | `llama-3.2-11b-vision-preview`（稳定）/ `llama-3.2-90b-vision-preview`（旗舰） | — |
+| 9 | **Mistral** | `https://api.mistral.ai/v1/chat/completions` | `pixtral-12b-2409`（免费额度） | — |
+| 10 | **Together AI** | `https://api.together.xyz/v1/chat/completions` | `meta-llama/Llama-3.2-11B-Vision-Instruct`（$5 免费额度） | — |
 
-### 🌍 国际供应商 / International
-
-| # | Provider / 供应商 | API URL | Free Vision Model / 免费视觉模型 | Get Key / 获取密钥 |
-|---|---|---|---|---|
-| 6 | **OpenAI** | `https://api.openai.com/v1/chat/completions` | None (paid: `gpt-4o`) | [platform.openai.com](https://platform.openai.com) |
-| 7 | **Google Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` | `gemini-2.0-flash` (free tier) | [aistudio.google.com](https://aistudio.google.com) |
-| 8 | **Groq** | `https://api.groq.com/openai/v1/chat/completions` | `llama-3.2-90b-vision-preview` | [console.groq.com](https://console.groq.com) |
-| 9 | **Mistral** | `https://api.mistral.ai/v1/chat/completions` | `pixtral-12b-2409` (free tier) | [console.mistral.ai](https://console.mistral.ai) |
-| 10 | **Together AI** | `https://api.together.xyz/v1/chat/completions` | `meta-llama/Llama-3.2-90B-Vision-Instruct` (free $5 credit) | [api.together.ai](https://api.together.ai) |
-
-> 💡 **推荐 / Recommended：** 智谱 `glm-4.6v-flash` 免费额度充足，中文友好，开箱即用。
+> ⚠️ **免费模型原则 / Free-only rule：** 安装配置时，AI 必须为用户选择 **免费视觉模型**（标 ⭐ 列）。只有当用户明确要求使用付费模型时才可选付费项（如 OpenAI `gpt-4o`），且必须先警告会产生费用。
+>
+> ⚠️ **限频提示 / Rate limit note：** 旗舰免费模型（如 `glm-4.6v-flash`、`llama-3.2-90b-vision`）因热度高可能频繁限频。**建议优先推荐次级/稳定版模型**——同样免费但更稳定。
 >
 > 💡 **本地部署 / Local：** Ollama 用户可设置 `API_URL=http://localhost:11434/v1/chat/completions`，`API_KEY=ollama`，`VISION_MODEL=llava`。
 
@@ -134,15 +131,26 @@ Step 4: 供应商选择 / Provider selection
 
 Step 5: 验证 API / Validate API
   └─ 执行 python "<skill_dir>/scripts/claw-eyes.py" validate
-     ├─ API_OK → API 就绪 ✅
+     ├─ API_OK → API 就绪 ✅ → Step 6
      └─ API_ERROR → 检查配置，回到 Step 4
 
-Step 6: MCP 检测（可选）/ MCP detection (optional)
+Step 6: 保存配置到 .env / Save config to .env
+  └─ 将 API_KEY + API_URL + VISION_MODEL 写入 <skill_dir>/scripts/.env
+     格式：
+     ---
+     CLAW_EYES_API_KEY=your_key_here
+     CLAW_EYES_API_URL=https://open.bigmodel.cn/api/paas/v4/chat/completions
+     CLAW_EYES_VISION_MODEL=glm-4.6v-flash
+     ---
+     ⚠️ .env 文件已在 .gitignore 中排除，不会提交到 Git
+     ⚠️ 如果用户之前已设过环境变量，环境变量优先于 .env
+
+Step 7: MCP 检测（可选）/ MCP detection (optional)
   └─ "API 已就绪 ✅ 要不要额外启用 MCP 备用模式？"
      ├─ YES → 尝试 mcp_call_tool 测试 → 记录可用的 MCP 服务/工具名
      └─ NO → 完成
 
-Step 7: 总结 / Summary
+Step 8: 总结 / Summary
   └─ 告知可用模式（API 主模式 + MCP 备用）及快捷键提醒
 ```
 
@@ -185,9 +193,22 @@ python "<skill_dir>/scripts/claw-eyes.py" analyze
 python "<skill_dir>/scripts/claw-eyes.py" analyze "请诊断这个错误截图"
 ```
 
-- 收到结果 → 返回给用户 ✅
-- `RATE_LIMITED` → 等几秒重试一次，仍限频则提示用户，降级到 Mode B
-- `ERROR` 或未配置 → 降级到 Mode B
+- 收到图片描述文字 → 返回给用户 ✅
+- `ERROR:...` → 根据 ERROR 信息判断原因并处理：
+  ```
+  判断依据：阅读 ERROR 信息中的关键词，不同供应商表述不同：
+  - 限频/额度类：rate、limit、quota、too many、访问量过大、限流、频率、并发...
+    处理：
+    1. 读取 .env 中的 CLAW_EYES_VISION_MODEL
+    2. 如果是旗舰模型 → 改为同供应商的次级免费模型（查供应商表）
+       → 修改 .env → 重新执行 analyze
+    3. 已经是次级模型 → 等几秒重试一次
+    4. 仍失败 → 降级到 Mode B
+  - 认证/配置类：auth、unauthorized、invalid key、forbidden、密钥无效...
+    → 检查 .env 配置是否正确，提示用户检查 API Key
+  - 其他错误 → 直接降级到 Mode B
+  ```
+- 完全未配置（无 .env 也无环境变量）→ 降级到 Mode B
 
 #### Mode B: MCP Tool（备用 / Backup）
 
