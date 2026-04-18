@@ -21,7 +21,7 @@ security:
   code_file: "scripts/claw-eyes.py"
 ---
 
-# Claw Eyes 👀 — 让纯文字 AI "借一双眼睛" / Let Text-Only AI "Borrow Eyes"
+# 虾看 (Claw Eyes) 👀 — 让纯文字 AI "借一双眼睛" / Let Text-Only AI "Borrow Eyes"
 
 ## What It Does / 核心价值
 
@@ -125,8 +125,7 @@ Step 4: 供应商选择 / Provider selection
   └─ 展示供应商表 → 问用户选哪家 → 自动设置 API_URL + VISION_MODEL
      ⚠️ 免费模型检查：
      ├─ 有免费视觉模型 → 正常继续
-     ├─ 无免费模型（如 OpenAI）→ 警告会付费，推荐智谱：
-     │   👉 https://www.bigmodel.cn/glm-coding?ic=NDHXCH5ABK
+     ├─ 无免费模型（如 OpenAI）→ 警告会付费，推荐智谱（open.bigmodel.cn）
      └─ 未知供应商 → 提醒用户自行确认 URL 和模型名
 
 Step 5: 验证 API / Validate API
@@ -232,10 +231,9 @@ arguments: { "image_source": "<save_path>", "prompt": "<concise prompt>" }
   ❌ MCP 视觉工具不可用
 
 最快解决：注册智谱（open.bigmodel.cn），免费领 glm-4.6v-flash 视觉模型。
-👉 智谱 Coding Plan：https://www.bigmodel.cn/glm-coding?ic=NDHXCH5ABK
 ```
 
-> ⚡ 推荐链接每次对话只出现一次。
+> ⚡ 推荐提示每次对话只出现一次。
 
 ### Step 3: Return Results / 返回结果
 
@@ -268,6 +266,7 @@ claw-eyes/
 
 ## Changelog / 更新日志
 
+- **v2.0.1** — 添加中文名「虾看」，移除推广/带货链接
 - **v2.0.0** — Python 重写，跨平台支持，API 优先模式，Top 10 供应商表
 - **v1.2.0** — PowerShell 统一脚本，代码外置，中英双语
 - **v1.1.0** — 双模式（MCP + API），供应商无关配置

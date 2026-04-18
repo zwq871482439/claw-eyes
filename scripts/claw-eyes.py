@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-claw-eyes.py — Claw Eyes unified script (v2.0.0)
+claw-eyes.py — Claw Eyes unified script (v2.0.1)
 Cross-platform clipboard image reader + vision API caller.
 Supports Windows / Linux / macOS.
 
